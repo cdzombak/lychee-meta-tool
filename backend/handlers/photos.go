@@ -3,23 +3,26 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
+	"github.com/cdzombak/lychee-meta-tool/backend/constants"
 	"github.com/cdzombak/lychee-meta-tool/backend/db"
 	"github.com/cdzombak/lychee-meta-tool/backend/models"
 	"github.com/cdzombak/lychee-meta-tool/backend/ollama"
 )
 
+// PhotoHandler handles HTTP requests related to photos
 type PhotoHandler struct {
 	db            *db.DB
 	lycheeBaseURL string
 	ollamaClient  *ollama.Client
 }
 
+// NewPhotoHandler creates a new PhotoHandler with the provided dependencies
 func NewPhotoHandler(database *db.DB, lycheeBaseURL string, ollamaClient *ollama.Client) *PhotoHandler {
 	return &PhotoHandler{
 		db:            database,
@@ -28,46 +31,55 @@ func NewPhotoHandler(database *db.DB, lycheeBaseURL string, ollamaClient *ollama
 	}
 }
 
-type ErrorResponse struct {
-	Error string `json:"error"`
-}
 
+// PhotosNeedingMetadataResponse represents the response for photos needing metadata
 type PhotosNeedingMetadataResponse struct {
 	Photos []models.PhotoResponse `json:"photos"`
 	Total  int                    `json:"total"`
 }
 
+// GetPhotosNeedingMetadata handles GET requests to retrieve photos that need metadata
 func (h *PhotoHandler) GetPhotosNeedingMetadata(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		MethodNotAllowed(w)
 		return
 	}
 
-	// Parse query parameters
+	// Parse and validate query parameters
 	query := r.URL.Query()
 	var albumID *string
-	if aid := query.Get("album_id"); aid != "" {
+	if aid := sanitizeQueryParam(query.Get("album_id")); aid != "" {
+		if !validateAlbumID(aid) {
+			BadRequest(w, "Invalid album_id format. Must be alphanumeric with underscores and hyphens only.", nil)
+			return
+		}
 		albumID = &aid
 	}
 
 	limit := DefaultLimit
-	if l := query.Get("limit"); l != "" {
+	if l := sanitizeQueryParam(query.Get("limit")); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil {
 			limit = validateLimit(parsed)
+		} else {
+			BadRequest(w, fmt.Sprintf("Invalid limit parameter. Must be a number between 1 and %d.", MaxLimit), nil)
+			return
 		}
 	}
 
 	offset := 0
-	if o := query.Get("offset"); o != "" {
+	if o := sanitizeQueryParam(query.Get("offset")); o != "" {
 		if parsed, err := strconv.Atoi(o); err == nil {
 			offset = validateOffset(parsed)
+		} else {
+			BadRequest(w, "Invalid offset parameter. Must be a non-negative number.", nil)
+			return
 		}
 	}
 
 	photos, err := h.db.GetPhotosNeedingMetadata(albumID, limit, offset)
 	if err != nil {
-		log.Printf("Failed to get photos needing metadata: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Printf("Failed to get photos needing metadata (album_id=%v, limit=%d, offset=%d): %v", albumID, limit, offset, err)
+		InternalServerError(w, "Failed to retrieve photos. Please try again.")
 		return
 	}
 
@@ -82,38 +94,38 @@ func (h *PhotoHandler) GetPhotosNeedingMetadata(w http.ResponseWriter, r *http.R
 		Total:  len(photoResponses),
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", constants.ContentTypeJSON)
 	json.NewEncoder(w).Encode(response)
 }
 
+// GetPhotoByID handles GET requests to retrieve a specific photo by ID
 func (h *PhotoHandler) GetPhotoByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		MethodNotAllowed(w)
 		return
 	}
 
 	// Extract and validate photo ID from URL path
 	photoID, valid := extractPhotoIDFromPath(r.URL.Path)
 	if !valid {
-		http.Error(w, "Invalid photo ID", http.StatusBadRequest)
+		InvalidID(w, "photo ID")
 		return
 	}
 
 	photo, err := h.db.GetPhotoByID(photoID)
 	if err != nil {
-		log.Printf("Failed to get photo by ID %s: %v", photoID, err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		DatabaseError(w, fmt.Sprintf("get photo by ID %s", photoID), err)
 		return
 	}
 
 	if photo == nil {
-		http.Error(w, "Photo not found", http.StatusNotFound)
+		NotFound(w, fmt.Sprintf("Photo with ID '%s' not found", photoID))
 		return
 	}
 
 	response := photo.ToPhotoResponse(h.lycheeBaseURL)
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", constants.ContentTypeJSON)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -126,19 +138,48 @@ func (h *PhotoHandler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 	// Extract and validate photo ID from URL path
 	photoID, valid := extractPhotoIDFromPath(r.URL.Path)
 	if !valid {
-		http.Error(w, "Invalid photo ID", http.StatusBadRequest)
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Invalid photo ID format. Must be 1-64 characters, alphanumeric with underscores and hyphens only.",
+		})
 		return
 	}
 
+	// Parse and validate JSON input
 	var update models.PhotoUpdate
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: fmt.Sprintf("Invalid JSON format: %v", err),
+		})
 		return
 	}
 
+	// Validate and sanitize the update data
+	if validationErrors := ValidatePhotoUpdate(&update); len(validationErrors) > 0 {
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusBadRequest)
+		errorMessages := make([]string, len(validationErrors))
+		for i, err := range validationErrors {
+			errorMessages[i] = err.Error()
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "Validation failed",
+			"details": errorMessages,
+		})
+		return
+	}
+
+	// Update the photo
 	if err := h.db.UpdatePhoto(photoID, update); err != nil {
 		log.Printf("Failed to update photo %s: %v", photoID, err)
-		http.Error(w, "Failed to update photo", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Failed to update photo. Please try again.",
+		})
 		return
 	}
 
@@ -146,7 +187,11 @@ func (h *PhotoHandler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 	photo, err := h.db.GetPhotoByID(photoID)
 	if err != nil {
 		log.Printf("Failed to get updated photo %s: %v", photoID, err)
-		http.Error(w, "Failed to retrieve updated photo", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Photo updated successfully but failed to retrieve updated data.",
+		})
 		return
 	}
 
@@ -158,7 +203,7 @@ func (h *PhotoHandler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 		Photo: photo.ToPhotoResponse(h.lycheeBaseURL),
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", constants.ContentTypeJSON)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -169,14 +214,22 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.ollamaClient == nil {
-		http.Error(w, "AI title generation not available", http.StatusServiceUnavailable)
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusServiceUnavailable)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "AI title generation is not configured. Please check your Ollama configuration.",
+		})
 		return
 	}
 
 	// Extract and validate photo ID from URL path
 	photoID, valid := extractPhotoIDFromPath(r.URL.Path)
 	if !valid {
-		http.Error(w, "Invalid photo ID", http.StatusBadRequest)
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Invalid photo ID format. Must be 1-64 characters, alphanumeric with underscores and hyphens only.",
+		})
 		return
 	}
 
@@ -184,12 +237,20 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 	photo, err := h.db.GetPhotoByID(photoID)
 	if err != nil {
 		log.Printf("Failed to get photo by ID %s for AI title generation: %v", photoID, err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Failed to retrieve photo details. Please try again.",
+		})
 		return
 	}
 
 	if photo == nil {
-		http.Error(w, "Photo not found", http.StatusNotFound)
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: fmt.Sprintf("Photo with ID '%s' not found.", photoID),
+		})
 		return
 	}
 
@@ -197,19 +258,53 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 	photoResponse := photo.ToPhotoResponse(h.lycheeBaseURL)
 	imageURL := photoResponse.FullURL
 
-	// Generate title with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
-	defer cancel()
-
-	title, err := h.ollamaClient.GenerateTitle(ctx, imageURL)
-	if err != nil {
-		log.Printf("Failed to generate AI title for photo %s: %v", photoID, err)
-		http.Error(w, "Failed to generate title", http.StatusInternalServerError)
+	// Validate image URL
+	if imageURL == "" {
+		log.Printf("Empty image URL for photo %s", photoID)
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Photo image URL is not available.",
+		})
 		return
 	}
 
-	// Clean up the title (remove quotes, trim whitespace)
-	title = strings.Trim(strings.TrimSpace(title), `"'`)
+	// Generate title with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), constants.AIGenerationTimeout)
+	defer cancel()
+
+	log.Printf("Generating AI title for photo %s using image URL: %s", photoID, imageURL)
+	title, err := h.ollamaClient.GenerateTitle(ctx, imageURL)
+	if err != nil {
+		log.Printf("Failed to generate AI title for photo %s: %v", photoID, err)
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "Failed to generate AI title. Please check your network connection and try again.",
+		})
+		return
+	}
+
+	// Sanitize and validate the generated title
+	title = sanitizeText(strings.Trim(strings.TrimSpace(title), `"'`))
+	if title == "" {
+		log.Printf("AI generated empty title for photo %s", photoID)
+		w.Header().Set("Content-Type", constants.ContentTypeJSON)
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(ErrorResponse{
+			Error: "AI generated an empty title. Please try again.",
+		})
+		return
+	}
+
+	// Validate the generated title length
+	if len(title) > MaxTitleLength {
+		log.Printf("AI generated title too long for photo %s: %d characters", photoID, len(title))
+		// Truncate to max length
+		title = title[:MaxTitleLength]
+	}
+
+	log.Printf("Successfully generated AI title for photo %s: %s", photoID, title)
 
 	response := struct {
 		Success bool   `json:"success"`
@@ -219,6 +314,6 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 		Title:   title,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", constants.ContentTypeJSON)
 	json.NewEncoder(w).Encode(response)
 }

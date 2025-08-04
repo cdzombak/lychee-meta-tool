@@ -1,3 +1,22 @@
+// Package main provides the Lychee Meta Tool server application.
+//
+// The Lychee Meta Tool is a web-based tool for managing Lychee photo libraries,
+// specifically designed for setting titles on photos that don't have them yet.
+// It provides both a web interface and REST API for photo metadata management
+// with optional AI-powered title generation using Ollama.
+//
+// Key features:
+//   - Photo metadata editing (titles, descriptions)
+//   - Album-based filtering
+//   - AI-powered title suggestions via Ollama integration
+//   - Support for MySQL, PostgreSQL, and SQLite databases
+//   - Embedded web frontend for easy deployment
+//
+// Usage:
+//   lychee-meta-tool -config config.yaml
+//
+// Configuration is provided via a YAML file specifying database connection,
+// server settings, Lychee base URL, and optional Ollama configuration.
 package main
 
 import (
@@ -20,9 +39,15 @@ import (
 	"github.com/cdzombak/lychee-meta-tool/backend/ollama"
 )
 
+// frontendFS embeds the built frontend assets into the binary.
+// This allows the application to serve the web interface without
+// requiring external files, enabling single-binary deployment.
 //go:embed frontend/dist
 var frontendFS embed.FS
 
+// main is the entry point for the Lychee Meta Tool server.
+// It handles configuration loading, database connection, optional
+// Ollama client initialization, HTTP server setup, and graceful shutdown.
 func main() {
 	configPath := flag.String("config", "config.yaml", "Path to configuration file")
 	flag.Parse()

@@ -3,11 +3,35 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 
+	"github.com/cdzombak/lychee-meta-tool/backend/constants"
 	"gopkg.in/yaml.v3"
 )
+
+// Constants for validation
+const (
+	// Port ranges
+	MinPort = 1
+	MaxPort = 65535
+
+	// Default values (using shared constants)
+	DefaultServerPort = constants.DefaultServerPort
+	DefaultMySQLPort  = constants.DefaultDatabasePort
+	DefaultPostgresPort = constants.DefaultPostgresPort
+
+	// Database types
+	DatabaseMySQL    = "mysql"
+	DatabasePostgres = "postgres"
+	DatabaseSQLite   = "sqlite"
+)
+
+// Model name pattern for Ollama (alphanumeric, dots, colons, hyphens)
+var modelNamePattern = regexp.MustCompile(`^[a-zA-Z0-9._:-]+$`)
 
 type DatabaseConfig struct {
 	Type     string `yaml:"type" json:"type"`
@@ -69,52 +93,201 @@ func Load(configPath string) (*Config, error) {
 	return &config, nil
 }
 
+// validate performs comprehensive validation of the configuration
 func (c *Config) validate() error {
-	if c.Database.Type == "" {
-		return fmt.Errorf("database type is required")
+	// Apply defaults first
+	c.applyDefaults()
+
+	// Validate database configuration
+	if err := c.validateDatabase(); err != nil {
+		return fmt.Errorf("database configuration error: %w", err)
 	}
 
-	switch c.Database.Type {
-	case "mysql", "postgres":
-		if c.Database.Host == "" {
-			return fmt.Errorf("database host is required for %s", c.Database.Type)
-		}
-		if c.Database.User == "" {
-			return fmt.Errorf("database user is required for %s", c.Database.Type)
-		}
-		if c.Database.Database == "" {
-			return fmt.Errorf("database name is required for %s", c.Database.Type)
-		}
-	case "sqlite":
-		if c.Database.Path == "" {
-			return fmt.Errorf("database path is required for sqlite")
-		}
-	default:
-		return fmt.Errorf("unsupported database type: %s", c.Database.Type)
+	// Validate server configuration
+	if err := c.validateServer(); err != nil {
+		return fmt.Errorf("server configuration error: %w", err)
 	}
 
-	if c.Server.Port == 0 {
-		c.Server.Port = 8080
+	// Validate Lychee base URL
+	if err := c.validateLycheeBaseURL(); err != nil {
+		return fmt.Errorf("lychee_base_url configuration error: %w", err)
 	}
 
-	if c.LycheeBaseURL == "" {
-		return fmt.Errorf("lychee_base_url is required")
+	// Validate Ollama configuration (optional)
+	if err := c.validateOllama(); err != nil {
+		return fmt.Errorf("ollama configuration error: %w", err)
 	}
 
 	return nil
 }
 
+// applyDefaults sets default values for optional configuration fields
+func (c *Config) applyDefaults() {
+	// Set default server port
+	if c.Server.Port == 0 {
+		c.Server.Port = DefaultServerPort
+	}
+
+	// Set default database ports
+	if c.Database.Port == 0 {
+		switch c.Database.Type {
+		case DatabaseMySQL:
+			c.Database.Port = DefaultMySQLPort
+		case DatabasePostgres:
+			c.Database.Port = DefaultPostgresPort
+		}
+	}
+
+	// Ensure CORS origins is not nil
+	if c.Server.CORS.AllowedOrigins == nil {
+		c.Server.CORS.AllowedOrigins = []string{}
+	}
+}
+
+// validateDatabase validates database configuration
+func (c *Config) validateDatabase() error {
+	if c.Database.Type == "" {
+		return fmt.Errorf("type is required (supported: mysql, postgres, sqlite)")
+	}
+
+	switch c.Database.Type {
+	case DatabaseMySQL, DatabasePostgres:
+		if c.Database.Host == "" {
+			return fmt.Errorf("host is required for %s database", c.Database.Type)
+		}
+		if c.Database.User == "" {
+			return fmt.Errorf("user is required for %s database", c.Database.Type)
+		}
+		if c.Database.Database == "" {
+			return fmt.Errorf("database name is required for %s database", c.Database.Type)
+		}
+		if c.Database.Port < MinPort || c.Database.Port > MaxPort {
+			return fmt.Errorf("port must be between %d and %d, got %d", MinPort, MaxPort, c.Database.Port)
+		}
+
+	case DatabaseSQLite:
+		if c.Database.Path == "" {
+			return fmt.Errorf("path is required for sqlite database")
+		}
+		// Validate that the directory exists (create if parent doesn't exist is common pattern)
+		dir := filepath.Dir(c.Database.Path)
+		if dir != "." && dir != "" {
+			if _, err := os.Stat(dir); os.IsNotExist(err) {
+				return fmt.Errorf("directory for sqlite database does not exist: %s", dir)
+			}
+		}
+
+	default:
+		return fmt.Errorf("unsupported database type: %s (supported: mysql, postgres, sqlite)", c.Database.Type)
+	}
+
+	return nil
+}
+
+// validateServer validates server configuration
+func (c *Config) validateServer() error {
+	if c.Server.Port < MinPort || c.Server.Port > MaxPort {
+		return fmt.Errorf("port must be between %d and %d, got %d", MinPort, MaxPort, c.Server.Port)
+	}
+
+	// Validate CORS origins
+	for i, origin := range c.Server.CORS.AllowedOrigins {
+		if origin == "" {
+			return fmt.Errorf("CORS allowed_origins[%d] cannot be empty", i)
+		}
+		// Parse URL to validate format
+		if _, err := url.Parse(origin); err != nil {
+			return fmt.Errorf("CORS allowed_origins[%d] has invalid URL format %q: %w", i, origin, err)
+		}
+	}
+
+	return nil
+}
+
+// validateLycheeBaseURL validates the Lychee base URL
+func (c *Config) validateLycheeBaseURL() error {
+	if c.LycheeBaseURL == "" {
+		return fmt.Errorf("lychee_base_url is required")
+	}
+
+	parsedURL, err := url.Parse(c.LycheeBaseURL)
+	if err != nil {
+		return fmt.Errorf("invalid URL format %q: %w", c.LycheeBaseURL, err)
+	}
+
+	if parsedURL.Scheme == "" {
+		return fmt.Errorf("lychee_base_url must include scheme (http/https): %q", c.LycheeBaseURL)
+	}
+
+	if parsedURL.Host == "" {
+		return fmt.Errorf("lychee_base_url must include host: %q", c.LycheeBaseURL)
+	}
+
+	if !strings.HasPrefix(parsedURL.Scheme, "http") {
+		return fmt.Errorf("lychee_base_url must use http or https scheme, got: %q", parsedURL.Scheme)
+	}
+
+	return nil
+}
+
+// validateOllama validates Ollama configuration (optional)
+func (c *Config) validateOllama() error {
+	// Ollama configuration is optional - if URL is empty, skip validation
+	if c.Ollama.URL == "" && c.Ollama.Model == "" {
+		return nil // No Ollama configuration provided
+	}
+
+	// If one field is provided, both should be provided
+	if c.Ollama.URL == "" {
+		return fmt.Errorf("url is required when model is specified")
+	}
+	if c.Ollama.Model == "" {
+		return fmt.Errorf("model is required when url is specified")
+	}
+
+	// Validate URL format
+	parsedURL, err := url.Parse(c.Ollama.URL)
+	if err != nil {
+		return fmt.Errorf("invalid URL format %q: %w", c.Ollama.URL, err)
+	}
+
+	if parsedURL.Scheme == "" {
+		return fmt.Errorf("url must include scheme (http/https): %q", c.Ollama.URL)
+	}
+
+	if parsedURL.Host == "" {
+		return fmt.Errorf("url must include host: %q", c.Ollama.URL)
+	}
+
+	if !strings.HasPrefix(parsedURL.Scheme, "http") {
+		return fmt.Errorf("url must use http or https scheme, got: %q", parsedURL.Scheme)
+	}
+
+	// Validate model name format
+	if !modelNamePattern.MatchString(c.Ollama.Model) {
+		return fmt.Errorf("model name contains invalid characters (allowed: alphanumeric, dots, colons, hyphens): %q", c.Ollama.Model)
+	}
+
+	return nil
+}
+
+// GetDSN returns the database connection string for the configured database
 func (c *Config) GetDSN() string {
 	switch c.Database.Type {
-	case "mysql":
-		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true",
+	case DatabaseMySQL:
+		return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true&charset=utf8mb4",
 			c.Database.User, c.Database.Password, c.Database.Host, c.Database.Port, c.Database.Database)
-	case "postgres":
+	case DatabasePostgres:
 		return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
 			c.Database.Host, c.Database.Port, c.Database.User, c.Database.Password, c.Database.Database)
-	case "sqlite":
+	case DatabaseSQLite:
 		return c.Database.Path
 	default:
 		return ""
 	}
+}
+
+// IsOllamaEnabled returns true if Ollama configuration is provided and valid
+func (c *Config) IsOllamaEnabled() bool {
+	return c.Ollama.URL != "" && c.Ollama.Model != ""
 }

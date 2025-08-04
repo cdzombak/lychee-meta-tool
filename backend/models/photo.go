@@ -1,3 +1,6 @@
+// Package models defines the data structures used throughout the Lychee Meta Tool.
+// These models represent photos, albums, and related metadata as stored in the
+// Lychee database and as exchanged via the REST API.
 package models
 
 import (
@@ -5,6 +8,9 @@ import (
 	"time"
 )
 
+// Photo represents a photo record from the Lychee database.
+// It contains all metadata fields including EXIF data, location information,
+// and user-provided metadata like title and description.
 type Photo struct {
 	ID           string     `json:"id" db:"id"`
 	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
@@ -34,17 +40,23 @@ type Photo struct {
 	Checksum     string     `json:"checksum" db:"checksum"`
 }
 
+// PhotoWithAlbum extends Photo with album information.
+// This is used when retrieving photos along with their album details.
 type PhotoWithAlbum struct {
 	Photo
 	AlbumTitle *string `json:"album_title" db:"album_title"`
 }
 
+// PhotoUpdate represents the fields that can be updated for a photo.
+// All fields are optional (pointers) to support partial updates.
 type PhotoUpdate struct {
 	Title       *string `json:"title"`
 	Description *string `json:"description"`
 	AlbumID     *string `json:"album_id"`
 }
 
+// PhotoResponse represents the JSON response format for photo data.
+// It includes computed URLs for thumbnail and full-size images.
 type PhotoResponse struct {
 	ID           string  `json:"id"`
 	Title        string  `json:"title"`
@@ -56,10 +68,13 @@ type PhotoResponse struct {
 	Type         string  `json:"type"`
 }
 
+// NeedsMetadata determines if a photo requires metadata updates.
+// Returns true if the photo has a generic/empty title or empty description.
 func (p *Photo) NeedsMetadata() bool {
 	return p.hasGenericTitle() || p.hasEmptyDescription()
 }
 
+// hasGenericTitle checks if the photo has a generic camera-generated title.
 func (p *Photo) hasGenericTitle() bool {
 	if p.Title == "" {
 		return true
@@ -68,6 +83,7 @@ func (p *Photo) hasGenericTitle() bool {
 	return IsGenericTitle(p.Title)
 }
 
+// hasEmptyDescription checks if the photo has an empty or nil description.
 func (p *Photo) hasEmptyDescription() bool {
 	return p.Description == nil || *p.Description == ""
 }
