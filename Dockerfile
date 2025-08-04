@@ -2,7 +2,7 @@ ARG BIN_NAME=lychee-meta-tool
 ARG BIN_VERSION=<unknown>
 
 # Build stage
-FROM node:22-alpine AS frontend-builder
+FROM --platform=$BUILDPLATFORM node:22-alpine AS frontend-builder
 WORKDIR /src/frontend
 COPY frontend/package*.json ./
 RUN npm ci --only=production
@@ -10,7 +10,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # Go build stage
-FROM golang:1-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1-alpine AS builder
 ARG BIN_NAME
 ARG BIN_VERSION
 RUN apk add --no-cache gcc musl-dev sqlite-dev
