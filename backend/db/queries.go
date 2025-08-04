@@ -53,9 +53,10 @@ func (db *DB) GetPhotosNeedingMetadata(albumID *string, limit, offset int) ([]mo
 	}
 
 	// Adjust query for PostgreSQL if needed
-	if db.driver == "postgres" {
+	switch db.driver {
+	case "postgres":
 		query = db.convertToPostgreSQL(query)
-	} else if db.driver == "sqlite" {
+	case "sqlite":
 		query = db.convertToSQLite(query)
 	}
 
@@ -260,9 +261,10 @@ func (db *DB) GetAlbumsWithPhotoCounts() ([]models.AlbumWithPhotoCount, error) {
 		ORDER BY a.title ASC`
 
 	// Adjust query for different databases
-	if db.driver == "postgres" {
+	switch db.driver {
+	case "postgres":
 		query = db.convertToPostgreSQL(query)
-	} else if db.driver == "sqlite" {
+	case "sqlite":
 		query = db.convertToSQLiteWithPhotoCounts(query)
 	}
 

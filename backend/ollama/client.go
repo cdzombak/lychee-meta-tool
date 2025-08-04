@@ -253,13 +253,13 @@ func (c *Client) generateTitleWithFallback(ctx context.Context, imageBytes []byt
 	var lastErr error
 	for i, strategy := range strategies {
 		log.Printf("Attempting strategy %d/%d: %s", i+1, len(strategies), strategyName(strategy))
-		
+
 		title, err := c.generateTitleWithStrategy(ctx, imageBytes, contentType, strategy)
 		if err == nil && title != "" {
 			log.Printf("Success with strategy: %s, title: %s", strategyName(strategy), title)
 			return title, nil
 		}
-		
+
 		lastErr = err
 		if err != nil {
 			log.Printf("Strategy %s failed: %v", strategyName(strategy), err)
@@ -314,7 +314,7 @@ func (c *Client) generateTitleWithStrategy(ctx context.Context, imageBytes []byt
 			return "", fmt.Errorf("failed to create temp file: %w", err)
 		}
 		imageData = api.ImageData(tmpFile)
-		cleanup = func() { os.Remove(tmpFile) }
+		cleanup = func() { _ = os.Remove(tmpFile) }
 
 	default:
 		return "", fmt.Errorf("unsupported strategy: %d", strategy)
@@ -341,7 +341,7 @@ func (c *Client) createTempFile(imageBytes []byte, contentType string) (string, 
 	defer tmpFile.Close()
 
 	if _, err := tmpFile.Write(imageBytes); err != nil {
-		os.Remove(tmpFile.Name())
+		_ = os.Remove(tmpFile.Name())
 		return "", fmt.Errorf("failed to write temp file: %w", err)
 	}
 
@@ -398,4 +398,3 @@ func getFileExtension(contentType string) string {
 		return constants.ExtJPG // Default to JPEG
 	}
 }
-

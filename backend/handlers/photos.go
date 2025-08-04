@@ -31,7 +31,6 @@ func NewPhotoHandler(database *db.DB, lycheeBaseURL string, ollamaClient *ollama
 	}
 }
 
-
 // PhotosNeedingMetadataResponse represents the response for photos needing metadata
 type PhotosNeedingMetadataResponse struct {
 	Photos []models.PhotoResponse `json:"photos"`
@@ -95,7 +94,7 @@ func (h *PhotoHandler) GetPhotosNeedingMetadata(w http.ResponseWriter, r *http.R
 	}
 
 	w.Header().Set("Content-Type", constants.ContentTypeJSON)
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // GetPhotoByID handles GET requests to retrieve a specific photo by ID
@@ -126,7 +125,7 @@ func (h *PhotoHandler) GetPhotoByID(w http.ResponseWriter, r *http.Request) {
 	response := photo.ToPhotoResponse(h.lycheeBaseURL)
 
 	w.Header().Set("Content-Type", constants.ContentTypeJSON)
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 func (h *PhotoHandler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
@@ -140,7 +139,7 @@ func (h *PhotoHandler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 	if !valid {
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error: "Invalid photo ID format. Must be 1-64 characters, alphanumeric with underscores and hyphens only.",
 		})
 		return
@@ -151,7 +150,7 @@ func (h *PhotoHandler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error: fmt.Sprintf("Invalid JSON format: %v", err),
 		})
 		return
@@ -165,8 +164,8 @@ func (h *PhotoHandler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 		for i, err := range validationErrors {
 			errorMessages[i] = err.Error()
 		}
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"error": "Validation failed",
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"error":   "Validation failed",
 			"details": errorMessages,
 		})
 		return
@@ -177,7 +176,7 @@ func (h *PhotoHandler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to update photo %s: %v", photoID, err)
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error: "Failed to update photo. Please try again.",
 		})
 		return
@@ -189,22 +188,22 @@ func (h *PhotoHandler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to get updated photo %s: %v", photoID, err)
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error: "Photo updated successfully but failed to retrieve updated data.",
 		})
 		return
 	}
 
 	response := struct {
-		Success bool                   `json:"success"`
-		Photo   models.PhotoResponse   `json:"photo"`
+		Success bool                 `json:"success"`
+		Photo   models.PhotoResponse `json:"photo"`
 	}{
 		Success: true,
-		Photo: photo.ToPhotoResponse(h.lycheeBaseURL),
+		Photo:   photo.ToPhotoResponse(h.lycheeBaseURL),
 	}
 
 	w.Header().Set("Content-Type", constants.ContentTypeJSON)
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
@@ -216,7 +215,7 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 	if h.ollamaClient == nil {
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusServiceUnavailable)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error: "AI title generation is not configured. Please check your Ollama configuration.",
 		})
 		return
@@ -227,7 +226,7 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 	if !valid {
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error: "Invalid photo ID format. Must be 1-64 characters, alphanumeric with underscores and hyphens only.",
 		})
 		return
@@ -239,7 +238,7 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to get photo by ID %s for AI title generation: %v", photoID, err)
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error: "Failed to retrieve photo details. Please try again.",
 		})
 		return
@@ -248,7 +247,7 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 	if photo == nil {
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error: fmt.Sprintf("Photo with ID '%s' not found.", photoID),
 		})
 		return
@@ -263,7 +262,7 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Empty image URL for photo %s", photoID)
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error: "Photo image URL is not available.",
 		})
 		return
@@ -279,7 +278,7 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to generate AI title for photo %s: %v", photoID, err)
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error: "Failed to generate AI title. Please check your network connection and try again.",
 		})
 		return
@@ -291,7 +290,7 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 		log.Printf("AI generated empty title for photo %s", photoID)
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Error: "AI generated an empty title. Please try again.",
 		})
 		return
@@ -315,5 +314,5 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", constants.ContentTypeJSON)
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }

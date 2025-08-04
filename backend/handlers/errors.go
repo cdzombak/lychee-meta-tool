@@ -31,26 +31,26 @@ const (
 
 // Standard error messages
 const (
-	ErrorMethodNotAllowed     = "HTTP method not allowed for this endpoint"
-	ErrorInvalidJSON          = "Invalid JSON format in request body"
-	ErrorInternalServer       = "Internal server error. Please try again later."
-	ErrorServiceUnavailable   = "Service temporarily unavailable. Please try again later."
-	ErrorResourceNotFound     = "Requested resource not found"
-	ErrorValidationFailed     = "Request validation failed"
-	ErrorInvalidID            = "Invalid ID format"
-	ErrorDatabaseConnection   = "Database connection error. Please try again."
+	ErrorMethodNotAllowed   = "HTTP method not allowed for this endpoint"
+	ErrorInvalidJSON        = "Invalid JSON format in request body"
+	ErrorInternalServer     = "Internal server error. Please try again later."
+	ErrorServiceUnavailable = "Service temporarily unavailable. Please try again later."
+	ErrorResourceNotFound   = "Requested resource not found"
+	ErrorValidationFailed   = "Request validation failed"
+	ErrorInvalidID          = "Invalid ID format"
+	ErrorDatabaseConnection = "Database connection error. Please try again."
 )
 
 // sendJSONError sends a standardized JSON error response
 func sendJSONError(w http.ResponseWriter, statusCode int, message string, details interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	
+
 	response := ErrorResponse{
 		Error:   message,
 		Details: details,
 	}
-	
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Failed to encode error response: %v", err)
 	}
@@ -60,17 +60,17 @@ func sendJSONError(w http.ResponseWriter, statusCode int, message string, detail
 func sendValidationError(w http.ResponseWriter, errors []ValidationError) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(StatusBadRequest)
-	
+
 	errorMessages := make([]string, len(errors))
 	for i, err := range errors {
 		errorMessages[i] = err.Error()
 	}
-	
+
 	response := ValidationErrorResponse{
 		Error:   ErrorValidationFailed,
 		Details: errorMessages,
 	}
-	
+
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Failed to encode validation error response: %v", err)
 	}
@@ -135,10 +135,4 @@ func ValidationFailed(w http.ResponseWriter, errors []ValidationError) {
 func DatabaseError(w http.ResponseWriter, operation string, err error) {
 	log.Printf("Database error during %s: %v", operation, err)
 	InternalServerError(w, ErrorDatabaseConnection)
-}
-
-// logAndError logs an error and sends an HTTP error response
-func logAndError(w http.ResponseWriter, statusCode int, logMessage string, responseMessage string) {
-	log.Printf(logMessage)
-	sendJSONError(w, statusCode, responseMessage, nil)
 }
