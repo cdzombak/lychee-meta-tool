@@ -1,3 +1,4 @@
+---
 version: "2"
 
 linters:
@@ -5,7 +6,7 @@ linters:
     rules:
       - linters:
           - errcheck
-        text: "Error return value of `[\w\.]+\.Close` is not checked"
+        text: "Error return value of `[\\w\\.]+\\.Close` is not checked"
       - linters:
           - errcheck
         text: "Error return value of `rand.Read` is not checked"

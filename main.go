@@ -12,7 +12,8 @@
 //   - Embedded web frontend for easy deployment
 //
 // Usage:
-//   lychee-meta-tool -config config.yaml
+//
+//	lychee-meta-tool -config config.yaml
 //
 // Configuration is provided via a YAML file specifying database connection,
 // server settings, Lychee base URL, and optional Ollama configuration.
@@ -41,6 +42,7 @@ import (
 // frontendFS embeds the built frontend assets into the binary.
 // This allows the application to serve the web interface without
 // requiring external files, enabling single-binary deployment.
+//
 //go:embed frontend/dist
 var frontendFS embed.FS
 
@@ -108,7 +110,7 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status":"ok"}`))
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
 	// Serve frontend static files from embedded filesystem
