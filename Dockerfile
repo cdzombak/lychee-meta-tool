@@ -2,7 +2,7 @@ ARG BIN_NAME=lychee-meta-tool
 ARG BIN_VERSION=<unknown>
 
 # Build stage
-FROM node:20-alpine AS frontend-builder
+FROM node:22-alpine AS frontend-builder
 WORKDIR /src/frontend
 COPY frontend/package*.json ./
 RUN npm ci --only=production
