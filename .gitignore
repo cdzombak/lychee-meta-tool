@@ -1,6 +1,7 @@
 # Project-specific binaries
 lychee-meta-tool
 lychee-meta-tool.exe
+out/
 
 # Configuration files (keep example files)
 config.yml

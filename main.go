@@ -45,12 +45,17 @@ import (
 //go:embed frontend/dist
 var frontendFS embed.FS
 
-// main is the entry point for the Lychee Meta Tool server.
-// It handles configuration loading, database connection, optional
-// Ollama client initialization, HTTP server setup, and graceful shutdown.
+var version = "dev"
+
 func main() {
 	configPath := flag.String("config", "config.yaml", "Path to configuration file")
+	showVersion := flag.Bool("version", false, "Show version information")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("lychee-meta-tool %s\n", version)
+		return
+	}
 
 	cfg, err := config.Load(*configPath)
 	if err != nil {
@@ -171,7 +176,7 @@ func main() {
 func corsMiddleware(next http.Handler, allowedOrigins []string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
-		
+
 		// Check if origin is allowed (only set CORS headers for allowed origins)
 		allowed := false
 		for _, allowedOrigin := range allowedOrigins {
