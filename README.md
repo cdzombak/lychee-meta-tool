@@ -2,6 +2,8 @@
 
 Quickly find & edit untitled photos in your [Lychee](https://github.com/LycheeOrg/Lychee) photo library. Automatically identifies photos with generic camera names (`IMG_1234`, `CD5_5678`, etc.) and provides an efficient interface for adding meaningful titles.
 
+![screenshot](metatool.jpeg)
+
 ## Features
 
 - **Smart Detection**: Automatically finds photos with generic camera names, UUIDs, or empty titles
