@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "vue": "^3.4.0",
-    "pinia": "^2.1.7",
+    "pinia": "^3.0.3",
     "axios": "^1.6.0"
   },
   "devDependencies": {
