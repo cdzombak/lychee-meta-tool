@@ -22,9 +22,17 @@ import (
 //go:embed frontend/dist
 var frontendFS embed.FS
 
+var version = "dev"
+
 func main() {
 	configPath := flag.String("config", "config.yaml", "Path to configuration file")
+	showVersion := flag.Bool("version", false, "Show version information")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Printf("lychee-meta-tool %s\n", version)
+		return
+	}
 
 	cfg, err := config.Load(*configPath)
 	if err != nil {
