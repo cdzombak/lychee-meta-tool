@@ -28,10 +28,16 @@ type ServerConfig struct {
 	CORS CORSConfig `yaml:"cors" json:"cors"`
 }
 
+type OllamaConfig struct {
+	URL   string `yaml:"url" json:"url"`
+	Model string `yaml:"model" json:"model"`
+}
+
 type Config struct {
 	Database     DatabaseConfig `yaml:"database" json:"database"`
 	Server       ServerConfig   `yaml:"server" json:"server"`
 	LycheeBaseURL string        `yaml:"lychee_base_url" json:"lychee_base_url"`
+	Ollama       OllamaConfig   `yaml:"ollama" json:"ollama"`
 }
 
 func Load(configPath string) (*Config, error) {

@@ -1,24 +1,30 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/cdzombak/lychee-meta-tool/backend/db"
 	"github.com/cdzombak/lychee-meta-tool/backend/models"
+	"github.com/cdzombak/lychee-meta-tool/backend/ollama"
 )
 
 type PhotoHandler struct {
 	db            *db.DB
 	lycheeBaseURL string
+	ollamaClient  *ollama.Client
 }
 
-func NewPhotoHandler(database *db.DB, lycheeBaseURL string) *PhotoHandler {
+func NewPhotoHandler(database *db.DB, lycheeBaseURL string, ollamaClient *ollama.Client) *PhotoHandler {
 	return &PhotoHandler{
 		db:            database,
 		lycheeBaseURL: lycheeBaseURL,
+		ollamaClient:  ollamaClient,
 	}
 }
 
@@ -150,6 +156,67 @@ func (h *PhotoHandler) UpdatePhoto(w http.ResponseWriter, r *http.Request) {
 	}{
 		Success: true,
 		Photo: photo.ToPhotoResponse(h.lycheeBaseURL),
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if h.ollamaClient == nil {
+		http.Error(w, "AI title generation not available", http.StatusServiceUnavailable)
+		return
+	}
+
+	// Extract and validate photo ID from URL path
+	photoID, valid := extractPhotoIDFromPath(r.URL.Path)
+	if !valid {
+		http.Error(w, "Invalid photo ID", http.StatusBadRequest)
+		return
+	}
+
+	// Get photo details
+	photo, err := h.db.GetPhotoByID(photoID)
+	if err != nil {
+		log.Printf("Failed to get photo by ID %s for AI title generation: %v", photoID, err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	if photo == nil {
+		http.Error(w, "Photo not found", http.StatusNotFound)
+		return
+	}
+
+	// Construct photo URL
+	photoResponse := photo.ToPhotoResponse(h.lycheeBaseURL)
+	imageURL := photoResponse.FullURL
+
+	// Generate title with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	title, err := h.ollamaClient.GenerateTitle(ctx, imageURL)
+	if err != nil {
+		log.Printf("Failed to generate AI title for photo %s: %v", photoID, err)
+		http.Error(w, "Failed to generate title", http.StatusInternalServerError)
+		return
+	}
+
+	// Clean up the title (remove quotes, trim whitespace)
+	title = strings.Trim(strings.TrimSpace(title), `"'`)
+
+	response := struct {
+		Success bool   `json:"success"`
+		Title   string `json:"title"`
+	}{
+		Success: true,
+		Title:   title,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

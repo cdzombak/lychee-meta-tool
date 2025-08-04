@@ -79,17 +79,19 @@ export default {
 
     // Keyboard shortcuts
     const handleKeydown = (event) => {
-      // Check if user is typing in an input field
-      if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') {
-        return
-      }
-
       if ((event.metaKey || event.ctrlKey) && event.key === 'j') {
         event.preventDefault()
         photosStore.previousPhoto()
       } else if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault()
         photosStore.nextPhoto()
+      } else if ((event.metaKey || event.ctrlKey) && event.key === 'i') {
+        event.preventDefault()
+        // Trigger AI title generation on the photo editor
+        const aiButton = document.querySelector('.ai-title-button')
+        if (aiButton && !aiButton.disabled) {
+          aiButton.click()
+        }
       }
     }
 

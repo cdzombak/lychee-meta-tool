@@ -9,15 +9,25 @@
       
       <div class="form-group">
         <label for="title">Title</label>
-        <input
-          id="title"
-          ref="titleInput"
-          v-model="formData.title"
-          type="text"
-          placeholder="Enter photo title..."
-          @keydown.enter="saveTitle"
-          @keydown.tab="focusDescription"
-        />
+        <div class="title-input-container">
+          <input
+            id="title"
+            ref="titleInput"
+            v-model="formData.title"
+            type="text"
+            placeholder="Enter photo title..."
+            @keydown.enter="saveTitle"
+            @keydown.tab="focusDescription"
+          />
+          <button
+            @click="generateAITitle"
+            :disabled="generatingTitle"
+            class="ai-title-button"
+            title="Generate AI title"
+          >
+            {{ generatingTitle ? '⏳' : '⭐' }}
+          </button>
+        </div>
       </div>
       
       <div class="form-group">
@@ -70,6 +80,7 @@ export default {
     const titleInput = ref(null)
     const descriptionInput = ref(null)
     const saving = ref(false)
+    const generatingTitle = ref(false)
     
     const formData = ref({
       title: '',
@@ -148,17 +159,64 @@ export default {
       }
     }
     
+    const generateAITitle = async () => {
+      if (!currentPhoto.value || generatingTitle.value) return
+      
+      generatingTitle.value = true
+      
+      try {
+        const response = await fetch(`/api/photos/${currentPhoto.value.id}/generate-title`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (!response.ok) {
+          if (response.status === 503) {
+            throw new Error('AI title generation is not available. Please check your Ollama configuration.')
+          }
+          throw new Error(`Failed to generate AI title: ${response.status}`)
+        }
+        
+        const data = await response.json()
+        
+        if (data.success && data.title) {
+          formData.value.title = data.title
+          
+          // Focus and select the generated title for easy editing
+          nextTick(() => {
+            if (titleInput.value) {
+              titleInput.value.focus()
+              titleInput.value.select()
+            }
+          })
+          
+          toastStore.showSuccess('AI title generated successfully!')
+        } else {
+          throw new Error('Invalid response from AI title generation')
+        }
+      } catch (error) {
+        console.error('AI title generation error:', error)
+        toastStore.showError(error.message || 'Failed to generate AI title')
+      } finally {
+        generatingTitle.value = false
+      }
+    }
+    
     return {
       photosStore,
       titleInput,
       descriptionInput,
       saving,
+      generatingTitle,
       formData,
       currentPhoto,
       saveTitle,
       saveDescription,
       focusDescription,
-      saveChanges
+      saveChanges,
+      generateAITitle
     }
   }
 }
@@ -188,5 +246,41 @@ export default {
 h3 {
   margin-bottom: 15px;
   color: #333;
+}
+
+.title-input-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.title-input-container input {
+  flex: 1;
+}
+
+.ai-title-button {
+  background: #ffc107;
+  color: #212529;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s, transform 0.1s;
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ai-title-button:hover:not(:disabled) {
+  background: #ffca2c;
+  transform: scale(1.05);
+}
+
+.ai-title-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
 }
 </style>

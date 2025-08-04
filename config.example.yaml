@@ -17,3 +17,8 @@ server:
 
 # Base URL of your Lychee installation (used to construct photo URLs)
 lychee_base_url: https://your-lychee-domain.com
+
+# Ollama AI integration for photo title suggestions (optional)
+ollama:
+  url: http://localhost:11434  # Ollama server URL
+  model: qwen2.5vl:3b          # Model name (e.g., qwen2.5vl:3b, llava:7b)

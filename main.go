@@ -17,6 +17,7 @@ import (
 	"github.com/cdzombak/lychee-meta-tool/backend/config"
 	"github.com/cdzombak/lychee-meta-tool/backend/db"
 	"github.com/cdzombak/lychee-meta-tool/backend/handlers"
+	"github.com/cdzombak/lychee-meta-tool/backend/ollama"
 )
 
 //go:embed frontend/dist
@@ -39,7 +40,20 @@ func main() {
 
 	log.Printf("Connected to %s database", database.Driver())
 
-	photoHandler := handlers.NewPhotoHandler(database, cfg.LycheeBaseURL)
+	// Initialize Ollama client if configured
+	var ollamaClient *ollama.Client
+	if cfg.Ollama.URL != "" && cfg.Ollama.Model != "" {
+		var err error
+		ollamaClient, err = ollama.NewClient(cfg.Ollama.URL, cfg.Ollama.Model)
+		if err != nil {
+			log.Printf("Warning: Failed to initialize Ollama client: %v", err)
+			log.Printf("AI title generation will be disabled")
+		} else {
+			log.Printf("Ollama client initialized with model %s at %s", cfg.Ollama.Model, cfg.Ollama.URL)
+		}
+	}
+
+	photoHandler := handlers.NewPhotoHandler(database, cfg.LycheeBaseURL, ollamaClient)
 	albumHandler := handlers.NewAlbumHandler(database)
 
 	mux := http.NewServeMux()
@@ -47,7 +61,9 @@ func main() {
 	// API routes
 	mux.HandleFunc("/api/photos/needsmetadata", photoHandler.GetPhotosNeedingMetadata)
 	mux.HandleFunc("/api/photos/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodPut {
+		if strings.HasSuffix(r.URL.Path, "/generate-title") && r.Method == http.MethodPost {
+			photoHandler.GenerateAITitle(w, r)
+		} else if r.Method == http.MethodPut {
 			photoHandler.UpdatePhoto(w, r)
 		} else {
 			photoHandler.GetPhotoByID(w, r)
@@ -143,7 +159,7 @@ func corsMiddleware(next http.Handler, allowedOrigins []string) http.Handler {
 		if allowed {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			// Only allow methods actually used by the application
-			w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 			w.Header().Set("Access-Control-Max-Age", "86400") // Cache preflight for 24 hours
 		}
