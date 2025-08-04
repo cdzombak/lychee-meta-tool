@@ -1,0 +1,19 @@
+database:
+  type: mysql  # mysql, postgres, or sqlite
+  host: localhost
+  port: 3306
+  user: lychee
+  password: your_password
+  database: lychee
+  # For SQLite, use path instead:
+  # path: /path/to/lychee.db
+
+server:
+  port: 8080
+  cors:
+    allowed_origins:
+      - http://localhost:5173  # Vite dev server
+      - http://localhost:3000  # Alternative dev port
+
+# Base URL of your Lychee installation (used to construct photo URLs)
+lychee_base_url: https://your-lychee-domain.com
