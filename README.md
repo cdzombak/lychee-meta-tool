@@ -1,6 +1,6 @@
 # Lychee Meta Tool
 
-A web-based tool for quickly adding titles to photos in Lychee photo libraries. Automatically identifies photos with generic camera names (IMG_1234, CD5_5678, etc.) and provides an efficient interface for adding meaningful titles.
+Quickly find & edit untitled photos in your Lychee photo library. Automatically identifies photos with generic camera names (IMG_1234, CD5_5678, etc.) and provides an efficient interface for adding meaningful titles.
 
 ## Features
 

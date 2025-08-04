@@ -1,7 +1,7 @@
 # Lychee Meta Tool - Development Notes
 
 ## Project Overview
-A web-based tool for managing Lychee photo libraries, specifically for setting titles on photos that don't have them yet.
+Quickly find & edit untitled photos in your Lychee photo library.
 
 ## Architecture
 - **Backend**: Go with embedded frontend assets using `go:embed`

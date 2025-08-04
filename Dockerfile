@@ -50,4 +50,4 @@ LABEL org.opencontainers.image.source="https://github.com/cdzombak/${BIN_NAME}.g
 LABEL org.opencontainers.image.version="${BIN_VERSION}"
 LABEL org.opencontainers.image.licenses="LGPL3"
 LABEL org.opencontainers.image.title="${BIN_NAME}"
-LABEL org.opencontainers.image.description="A web-based tool for managing Lychee photo libraries, specifically for setting titles on photos"
+LABEL org.opencontainers.image.description="Quickly find & edit untitled photos in your Lychee photo library"

@@ -1,6 +1,6 @@
 # Spec: lychee-meta-tool
 
-This is a web-based tool for managing Lychee photo libraries. It allows the user to quickly set the title and description on photos that don't yet have them, and optionally move them to a different album.
+Quickly find & edit untitled photos in your Lychee photo library. It allows the user to quickly set the title and description on photos that don't yet have them, and optionally move them to a different album.
 
 ## Functional Requirements
 

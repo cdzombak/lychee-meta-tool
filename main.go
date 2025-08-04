@@ -1,7 +1,6 @@
 // Package main provides the Lychee Meta Tool server application.
 //
-// The Lychee Meta Tool is a web-based tool for managing Lychee photo libraries,
-// specifically designed for setting titles on photos that don't have them yet.
+// The Lychee Meta Tool quickly finds & edits untitled photos in your Lychee photo library.
 // It provides both a web interface and REST API for photo metadata management
 // with optional AI-powered title generation using Ollama.
 //

@@ -1,6 +1,6 @@
 -s dir
 --name lychee-meta-tool
---description "A web-based tool for managing Lychee photo libraries, specifically for setting titles on photos"
+--description "Quickly find & edit untitled photos in your Lychee photo library"
 --url "https://github.com/cdzombak/lychee-meta-tool"
 --maintainer "Chris Dzombak <https://www.dzombak.com>"
 --license LGPL-3.0
