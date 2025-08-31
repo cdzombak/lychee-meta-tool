@@ -12,7 +12,7 @@ func (db *DB) GetPhotosNeedingMetadata(albumID *string, limit, offset int) ([]mo
 	query := `
 		SELECT 
 			p.id, p.created_at, p.updated_at, p.owner_id, p.old_album_id,
-			p.title, p.description, p.tags, p.license, p.is_starred,
+			p.title, p.description, p.license, p.is_starred,
 			p.iso, p.make, p.model, p.lens, p.aperture, p.shutter, p.focal,
 			p.latitude, p.longitude, p.altitude, p.img_direction, p.location,
 			p.taken_at, p.type, p.filesize, p.checksum,
@@ -71,7 +71,7 @@ func (db *DB) GetPhotosNeedingMetadata(albumID *string, limit, offset int) ([]mo
 		var photo models.PhotoWithSizeVariants
 		err := rows.Scan(
 			&photo.ID, &photo.CreatedAt, &photo.UpdatedAt, &photo.OwnerID, &photo.AlbumID,
-			&photo.Title, &photo.Description, &photo.Tags, &photo.License, &photo.IsStarred,
+			&photo.Title, &photo.Description, &photo.License, &photo.IsStarred,
 			&photo.ISO, &photo.Make, &photo.Model, &photo.Lens, &photo.Aperture, &photo.Shutter, &photo.Focal,
 			&photo.Latitude, &photo.Longitude, &photo.Altitude, &photo.ImgDirection, &photo.Location,
 			&photo.TakenAt, &photo.Type, &photo.Filesize, &photo.Checksum,
@@ -90,7 +90,7 @@ func (db *DB) GetPhotoByID(id string) (*models.PhotoWithSizeVariants, error) {
 	query := `
 		SELECT 
 			p.id, p.created_at, p.updated_at, p.owner_id, p.old_album_id,
-			p.title, p.description, p.tags, p.license, p.is_starred,
+			p.title, p.description, p.license, p.is_starred,
 			p.iso, p.make, p.model, p.lens, p.aperture, p.shutter, p.focal,
 			p.latitude, p.longitude, p.altitude, p.img_direction, p.location,
 			p.taken_at, p.type, p.filesize, p.checksum,
@@ -106,7 +106,7 @@ func (db *DB) GetPhotoByID(id string) (*models.PhotoWithSizeVariants, error) {
 	var photo models.PhotoWithSizeVariants
 	err := db.QueryRow(query, id).Scan(
 		&photo.ID, &photo.CreatedAt, &photo.UpdatedAt, &photo.OwnerID, &photo.AlbumID,
-		&photo.Title, &photo.Description, &photo.Tags, &photo.License, &photo.IsStarred,
+		&photo.Title, &photo.Description, &photo.License, &photo.IsStarred,
 		&photo.ISO, &photo.Make, &photo.Model, &photo.Lens, &photo.Aperture, &photo.Shutter, &photo.Focal,
 		&photo.Latitude, &photo.Longitude, &photo.Altitude, &photo.ImgDirection, &photo.Location,
 		&photo.TakenAt, &photo.Type, &photo.Filesize, &photo.Checksum,
