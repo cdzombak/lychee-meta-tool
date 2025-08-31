@@ -19,7 +19,6 @@ type Photo struct {
 	AlbumID      *string    `json:"album_id" db:"old_album_id"`
 	Title        string     `json:"title" db:"title"`
 	Description  *string    `json:"description" db:"description"`
-	Tags         *string    `json:"tags" db:"tags"`
 	License      string     `json:"license" db:"license"`
 	IsStarred    bool       `json:"is_starred" db:"is_starred"`
 	ISO          *string    `json:"iso" db:"iso"`
