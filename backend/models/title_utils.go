@@ -16,7 +16,7 @@ var (
 		regexp.MustCompile(`^P\d{7}(\.\w+)?$`),            // P1234567 or P1234567.jpg
 		regexp.MustCompile(`^\d{8}_\d{6}(\.\w+)?$`),       // 20230101_123456 or 20230101_123456.jpg
 		regexp.MustCompile(`^IMG-\d{8}-WA\d{4}(\.\w+)?$`), // WhatsApp format
-		regexp.MustCompile(`^Screenshot.*(\.\w+)?$`),       // Screenshot files
+		regexp.MustCompile(`^Screenshot.*(\.\w+)?$`),      // Screenshot files
 	}
 
 	// UUID pattern (with or without dashes, with optional file extension)
@@ -30,7 +30,7 @@ func IsGenericTitle(title string) bool {
 
 	// Remove leading/trailing whitespace
 	title = strings.TrimSpace(title)
-	
+
 	if title == "" {
 		return true
 	}
@@ -45,6 +45,11 @@ func IsGenericTitle(title string) bool {
 		if pattern.MatchString(title) {
 			return true
 		}
+	}
+
+	// Check for prefix "IDG_" indicating the image is named for the Adobe Indigo camera app
+	if strings.HasPrefix(title, "IDG_") {
+		return true
 	}
 
 	return false
