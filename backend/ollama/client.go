@@ -11,9 +11,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/cdzombak/lychee-meta-tool/backend/ai"
 	"github.com/cdzombak/lychee-meta-tool/backend/constants"
 	"github.com/ollama/ollama/api"
 )
+
+var _ ai.Client = (*Client)(nil)
 
 // Constants for configuration and limits (using shared constants)
 const (

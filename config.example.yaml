@@ -22,3 +22,9 @@ lychee_base_url: https://your-lychee-domain.com
 ollama:
   url: http://localhost:11434  # Ollama server URL
   model: qwen2.5vl:3b          # Model name (e.g., qwen2.5vl:3b, llava:7b)
+
+# OpenAI-style API integration for photo title suggestions (optional)
+openai:
+  url: https://api.openai.com/v1/chat/completions  # API endpoint URL
+  api_key: your-api-key-here                       # API key for authentication
+  model: gpt-4o                                    # Model name (optional, defaults to gpt-4o)

@@ -33,6 +33,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cdzombak/lychee-meta-tool/backend/ai"
 	"github.com/cdzombak/lychee-meta-tool/backend/config"
 	"github.com/cdzombak/lychee-meta-tool/backend/db"
 	"github.com/cdzombak/lychee-meta-tool/backend/handlers"
@@ -71,20 +72,32 @@ func main() {
 
 	log.Printf("Connected to %s database", database.Driver())
 
-	// Initialize Ollama client if configured
-	var ollamaClient *ollama.Client
-	if cfg.Ollama.URL != "" && cfg.Ollama.Model != "" {
+	var aiClient ai.Client
+	if cfg.IsOllamaEnabled() {
 		var err error
-		ollamaClient, err = ollama.NewClient(cfg.Ollama.URL, cfg.Ollama.Model)
+		aiClient, err = ollama.NewClient(cfg.Ollama.URL, cfg.Ollama.Model)
 		if err != nil {
 			log.Printf("Warning: Failed to initialize Ollama client: %v", err)
 			log.Printf("AI title generation will be disabled")
 		} else {
 			log.Printf("Ollama client initialized with model %s at %s", cfg.Ollama.Model, cfg.Ollama.URL)
 		}
+	} else if cfg.IsOpenAIEnabled() {
+		model := cfg.OpenAI.Model
+		if model == "" {
+			model = ai.DefaultModel
+		}
+		var err error
+		aiClient, err = ai.NewOpenAIClient(cfg.OpenAI.URL, cfg.OpenAI.APIKey, model)
+		if err != nil {
+			log.Printf("Warning: Failed to initialize OpenAI client: %v", err)
+			log.Printf("AI title generation will be disabled")
+		} else {
+			log.Printf("OpenAI client initialized with model %s at %s", model, cfg.OpenAI.URL)
+		}
 	}
 
-	photoHandler := handlers.NewPhotoHandler(database, cfg.LycheeBaseURL, ollamaClient)
+	photoHandler := handlers.NewPhotoHandler(database, cfg.LycheeBaseURL, aiClient)
 	albumHandler := handlers.NewAlbumHandler(database)
 
 	mux := http.NewServeMux()
