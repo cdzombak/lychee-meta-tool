@@ -30,8 +30,7 @@ const (
 	DatabaseSQLite   = "sqlite"
 )
 
-// Model name pattern for Ollama (alphanumeric, dots, colons, hyphens)
-var modelNamePattern = regexp.MustCompile(`^[a-zA-Z0-9._:-]+$`)
+var modelNamePattern = regexp.MustCompile(`^[a-zA-Z0-9._:/\-]+$`)
 
 type DatabaseConfig struct {
 	Type     string `yaml:"type" json:"type"`
@@ -280,9 +279,8 @@ func (c *Config) validateOllama() error {
 		return fmt.Errorf("url must use http or https scheme, got: %q", parsedURL.Scheme)
 	}
 
-	// Validate model name format
 	if !modelNamePattern.MatchString(c.Ollama.Model) {
-		return fmt.Errorf("model name contains invalid characters (allowed: alphanumeric, dots, colons, hyphens): %q", c.Ollama.Model)
+		return fmt.Errorf("model name contains invalid characters (allowed: alphanumeric, dots, colons, hyphens, slashes): %q", c.Ollama.Model)
 	}
 
 	return nil
@@ -338,7 +336,7 @@ func (c *Config) validateOpenAI() error {
 	}
 
 	if c.OpenAI.Model != "" && !modelNamePattern.MatchString(c.OpenAI.Model) {
-		return fmt.Errorf("model name contains invalid characters (allowed: alphanumeric, dots, colons, hyphens): %q", c.OpenAI.Model)
+		return fmt.Errorf("model name contains invalid characters (allowed: alphanumeric, dots, colons, hyphens, slashes): %q", c.OpenAI.Model)
 	}
 
 	return nil
