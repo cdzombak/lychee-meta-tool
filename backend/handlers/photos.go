@@ -301,6 +301,8 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 
 	// Sanitize and validate the generated title
 	title = sanitizeText(strings.Trim(strings.TrimSpace(title), `"'`))
+	// Strip trailing period if present
+	title = strings.TrimSuffix(title, ".")
 	if title == "" {
 		log.Printf("AI generated empty title for photo %s", photoID)
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
