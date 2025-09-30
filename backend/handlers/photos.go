@@ -9,25 +9,25 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cdzombak/lychee-meta-tool/backend/ai"
 	"github.com/cdzombak/lychee-meta-tool/backend/constants"
 	"github.com/cdzombak/lychee-meta-tool/backend/db"
 	"github.com/cdzombak/lychee-meta-tool/backend/models"
-	"github.com/cdzombak/lychee-meta-tool/backend/ollama"
 )
 
 // PhotoHandler handles HTTP requests related to photos
 type PhotoHandler struct {
 	db            *db.DB
 	lycheeBaseURL string
-	ollamaClient  *ollama.Client
+	aiClient      ai.Client
 }
 
 // NewPhotoHandler creates a new PhotoHandler with the provided dependencies
-func NewPhotoHandler(database *db.DB, lycheeBaseURL string, ollamaClient *ollama.Client) *PhotoHandler {
+func NewPhotoHandler(database *db.DB, lycheeBaseURL string, aiClient ai.Client) *PhotoHandler {
 	return &PhotoHandler{
 		db:            database,
 		lycheeBaseURL: lycheeBaseURL,
-		ollamaClient:  ollamaClient,
+		aiClient:      aiClient,
 	}
 }
 
@@ -212,11 +212,11 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.ollamaClient == nil {
+	if h.aiClient == nil {
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_ = json.NewEncoder(w).Encode(ErrorResponse{
-			Error: "AI title generation is not configured. Please check your Ollama configuration.",
+			Error: "AI title generation is not configured. Please check your AI backend configuration.",
 		})
 		return
 	}
@@ -273,7 +273,7 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 
 	log.Printf("Generating AI title for photo %s using image URL: %s", photoID, imageURL)
-	title, err := h.ollamaClient.GenerateTitle(ctx, imageURL)
+	title, err := h.aiClient.GenerateTitle(ctx, imageURL)
 	if err != nil {
 		log.Printf("Failed to generate AI title for photo %s: %v", photoID, err)
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)

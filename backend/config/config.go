@@ -30,8 +30,7 @@ const (
 	DatabaseSQLite   = "sqlite"
 )
 
-// Model name pattern for Ollama (alphanumeric, dots, colons, hyphens)
-var modelNamePattern = regexp.MustCompile(`^[a-zA-Z0-9._:-]+$`)
+var modelNamePattern = regexp.MustCompile(`^[a-zA-Z0-9._:/\-]+$`)
 
 type DatabaseConfig struct {
 	Type     string `yaml:"type" json:"type"`
@@ -57,11 +56,18 @@ type OllamaConfig struct {
 	Model string `yaml:"model" json:"model"`
 }
 
+type OpenAIConfig struct {
+	URL    string `yaml:"url" json:"url"`
+	APIKey string `yaml:"api_key" json:"api_key"`
+	Model  string `yaml:"model" json:"model"`
+}
+
 type Config struct {
-	Database     DatabaseConfig `yaml:"database" json:"database"`
-	Server       ServerConfig   `yaml:"server" json:"server"`
-	LycheeBaseURL string        `yaml:"lychee_base_url" json:"lychee_base_url"`
-	Ollama       OllamaConfig   `yaml:"ollama" json:"ollama"`
+	Database      DatabaseConfig `yaml:"database" json:"database"`
+	Server        ServerConfig   `yaml:"server" json:"server"`
+	LycheeBaseURL string         `yaml:"lychee_base_url" json:"lychee_base_url"`
+	Ollama        OllamaConfig   `yaml:"ollama" json:"ollama"`
+	OpenAI        OpenAIConfig   `yaml:"openai" json:"openai"`
 }
 
 func Load(configPath string) (*Config, error) {
@@ -116,6 +122,16 @@ func (c *Config) validate() error {
 	// Validate Ollama configuration (optional)
 	if err := c.validateOllama(); err != nil {
 		return fmt.Errorf("ollama configuration error: %w", err)
+	}
+
+	// Validate OpenAI configuration (optional)
+	if err := c.validateOpenAI(); err != nil {
+		return fmt.Errorf("openai configuration error: %w", err)
+	}
+
+	// Ensure only one AI backend is configured
+	if err := c.validateAIBackendExclusivity(); err != nil {
+		return fmt.Errorf("AI backend configuration error: %w", err)
 	}
 
 	return nil
@@ -263,9 +279,8 @@ func (c *Config) validateOllama() error {
 		return fmt.Errorf("url must use http or https scheme, got: %q", parsedURL.Scheme)
 	}
 
-	// Validate model name format
 	if !modelNamePattern.MatchString(c.Ollama.Model) {
-		return fmt.Errorf("model name contains invalid characters (allowed: alphanumeric, dots, colons, hyphens): %q", c.Ollama.Model)
+		return fmt.Errorf("model name contains invalid characters (allowed: alphanumeric, dots, colons, hyphens, slashes): %q", c.Ollama.Model)
 	}
 
 	return nil
@@ -287,7 +302,64 @@ func (c *Config) GetDSN() string {
 	}
 }
 
+// validateOpenAI validates OpenAI configuration (optional)
+func (c *Config) validateOpenAI() error {
+	// OpenAI configuration is optional - if URL is empty, skip validation
+	if c.OpenAI.URL == "" && c.OpenAI.APIKey == "" && c.OpenAI.Model == "" {
+		return nil
+	}
+
+	// If one field is provided, URL and APIKey are required
+	if c.OpenAI.URL == "" {
+		return fmt.Errorf("url is required when openai is configured")
+	}
+	if c.OpenAI.APIKey == "" {
+		return fmt.Errorf("api_key is required when openai is configured")
+	}
+
+	// Validate URL format
+	parsedURL, err := url.Parse(c.OpenAI.URL)
+	if err != nil {
+		return fmt.Errorf("invalid URL format %q: %w", c.OpenAI.URL, err)
+	}
+
+	if parsedURL.Scheme == "" {
+		return fmt.Errorf("url must include scheme (http/https): %q", c.OpenAI.URL)
+	}
+
+	if parsedURL.Host == "" {
+		return fmt.Errorf("url must include host: %q", c.OpenAI.URL)
+	}
+
+	if !strings.HasPrefix(parsedURL.Scheme, "http") {
+		return fmt.Errorf("url must use http or https scheme, got: %q", parsedURL.Scheme)
+	}
+
+	if c.OpenAI.Model != "" && !modelNamePattern.MatchString(c.OpenAI.Model) {
+		return fmt.Errorf("model name contains invalid characters (allowed: alphanumeric, dots, colons, hyphens, slashes): %q", c.OpenAI.Model)
+	}
+
+	return nil
+}
+
+// validateAIBackendExclusivity ensures only one AI backend is configured
+func (c *Config) validateAIBackendExclusivity() error {
+	ollamaEnabled := c.Ollama.URL != "" && c.Ollama.Model != ""
+	openAIEnabled := c.OpenAI.URL != "" && c.OpenAI.APIKey != ""
+
+	if ollamaEnabled && openAIEnabled {
+		return fmt.Errorf("cannot configure both Ollama and OpenAI backends simultaneously. Please choose one")
+	}
+
+	return nil
+}
+
 // IsOllamaEnabled returns true if Ollama configuration is provided and valid
 func (c *Config) IsOllamaEnabled() bool {
 	return c.Ollama.URL != "" && c.Ollama.Model != ""
+}
+
+// IsOpenAIEnabled returns true if OpenAI configuration is provided and valid
+func (c *Config) IsOpenAIEnabled() bool {
+	return c.OpenAI.URL != "" && c.OpenAI.APIKey != ""
 }
