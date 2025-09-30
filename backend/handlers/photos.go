@@ -253,13 +253,19 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Construct photo URL
+	// Construct photo URLs
 	photoResponse := photo.ToPhotoResponse(h.lycheeBaseURL)
-	imageURL := photoResponse.FullURL
+
+	// Prefer large URL for AI processing, fall back to original
+	imageURL := photoResponse.LargeURL
+	if imageURL == "" {
+		log.Printf("Large variant not available for photo %s, using original", photoID)
+		imageURL = photoResponse.FullURL
+	}
 
 	// Validate image URL
 	if imageURL == "" {
-		log.Printf("Empty image URL for photo %s", photoID)
+		log.Printf("No image URL available for photo %s", photoID)
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)
 		w.WriteHeader(http.StatusInternalServerError)
 		_ = json.NewEncoder(w).Encode(ErrorResponse{
@@ -274,6 +280,15 @@ func (h *PhotoHandler) GenerateAITitle(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Generating AI title for photo %s using image URL: %s", photoID, imageURL)
 	title, err := h.aiClient.GenerateTitle(ctx, imageURL)
+
+	// If large URL failed, try with original as fallback
+	if err != nil && photoResponse.LargeURL != "" && imageURL == photoResponse.LargeURL {
+		log.Printf("Failed with large variant, retrying with original for photo %s: %v", photoID, err)
+		imageURL = photoResponse.FullURL
+		if imageURL != "" {
+			title, err = h.aiClient.GenerateTitle(ctx, imageURL)
+		}
+	}
 	if err != nil {
 		log.Printf("Failed to generate AI title for photo %s: %v", photoID, err)
 		w.Header().Set("Content-Type", constants.ContentTypeJSON)

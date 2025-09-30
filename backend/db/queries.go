@@ -10,7 +10,7 @@ import (
 
 func (db *DB) GetPhotosNeedingMetadata(albumID *string, limit, offset int) ([]models.PhotoWithSizeVariants, error) {
 	query := `
-		SELECT 
+		SELECT
 			p.id, p.created_at, p.updated_at, p.owner_id, p.old_album_id,
 			p.title, p.description, p.license, p.is_starred,
 			p.iso, p.make, p.model, p.lens, p.aperture, p.shutter, p.focal,
@@ -18,11 +18,13 @@ func (db *DB) GetPhotosNeedingMetadata(albumID *string, limit, offset int) ([]mo
 			p.taken_at, p.type, p.filesize, p.checksum,
 			a.title as album_title,
 			sv_thumb.short_path as thumbnail_path,
-			sv_large.short_path as large_path
+			sv_large.short_path as large_path,
+			sv_original.short_path as original_path
 		FROM photos p
 		LEFT JOIN base_albums a ON p.old_album_id = a.id
 		LEFT JOIN size_variants sv_thumb ON p.id = sv_thumb.photo_id AND sv_thumb.type = 6
-		LEFT JOIN size_variants sv_large ON p.id = sv_large.photo_id AND sv_large.type = 0
+		LEFT JOIN size_variants sv_large ON p.id = sv_large.photo_id AND sv_large.type = 3
+		LEFT JOIN size_variants sv_original ON p.id = sv_original.photo_id AND sv_original.type = 0
 		WHERE (
 			p.title = '' OR p.title IS NULL OR
 			p.title REGEXP '^[A-Za-z0-9]{3}_[0-9]+(\\.\\w+)?$' OR
@@ -75,7 +77,7 @@ func (db *DB) GetPhotosNeedingMetadata(albumID *string, limit, offset int) ([]mo
 			&photo.ISO, &photo.Make, &photo.Model, &photo.Lens, &photo.Aperture, &photo.Shutter, &photo.Focal,
 			&photo.Latitude, &photo.Longitude, &photo.Altitude, &photo.ImgDirection, &photo.Location,
 			&photo.TakenAt, &photo.Type, &photo.Filesize, &photo.Checksum,
-			&photo.AlbumTitle, &photo.ThumbnailPath, &photo.OriginalPath,
+			&photo.AlbumTitle, &photo.ThumbnailPath, &photo.LargePath, &photo.OriginalPath,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan photo: %w", err)
@@ -88,7 +90,7 @@ func (db *DB) GetPhotosNeedingMetadata(albumID *string, limit, offset int) ([]mo
 
 func (db *DB) GetPhotoByID(id string) (*models.PhotoWithSizeVariants, error) {
 	query := `
-		SELECT 
+		SELECT
 			p.id, p.created_at, p.updated_at, p.owner_id, p.old_album_id,
 			p.title, p.description, p.license, p.is_starred,
 			p.iso, p.make, p.model, p.lens, p.aperture, p.shutter, p.focal,
@@ -96,11 +98,13 @@ func (db *DB) GetPhotoByID(id string) (*models.PhotoWithSizeVariants, error) {
 			p.taken_at, p.type, p.filesize, p.checksum,
 			a.title as album_title,
 			sv_thumb.short_path as thumbnail_path,
-			sv_large.short_path as large_path
+			sv_large.short_path as large_path,
+			sv_original.short_path as original_path
 		FROM photos p
 		LEFT JOIN base_albums a ON p.old_album_id = a.id
 		LEFT JOIN size_variants sv_thumb ON p.id = sv_thumb.photo_id AND sv_thumb.type = 6
-		LEFT JOIN size_variants sv_large ON p.id = sv_large.photo_id AND sv_large.type = 0
+		LEFT JOIN size_variants sv_large ON p.id = sv_large.photo_id AND sv_large.type = 3
+		LEFT JOIN size_variants sv_original ON p.id = sv_original.photo_id AND sv_original.type = 0
 		WHERE p.id = ?`
 
 	var photo models.PhotoWithSizeVariants
@@ -110,7 +114,7 @@ func (db *DB) GetPhotoByID(id string) (*models.PhotoWithSizeVariants, error) {
 		&photo.ISO, &photo.Make, &photo.Model, &photo.Lens, &photo.Aperture, &photo.Shutter, &photo.Focal,
 		&photo.Latitude, &photo.Longitude, &photo.Altitude, &photo.ImgDirection, &photo.Location,
 		&photo.TakenAt, &photo.Type, &photo.Filesize, &photo.Checksum,
-		&photo.AlbumTitle, &photo.ThumbnailPath, &photo.OriginalPath,
+		&photo.AlbumTitle, &photo.ThumbnailPath, &photo.LargePath, &photo.OriginalPath,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {

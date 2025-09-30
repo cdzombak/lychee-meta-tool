@@ -31,7 +31,8 @@ type SizeVariant struct {
 type PhotoWithSizeVariants struct {
 	PhotoWithAlbum
 	ThumbnailPath *string `json:"thumbnail_path" db:"thumbnail_path"`
-	OriginalPath  *string `json:"original_path" db:"large_path"`
+	LargePath     *string `json:"large_path" db:"large_path"`
+	OriginalPath  *string `json:"original_path" db:"original_path"`
 }
 
 // GetThumbnailVariant returns the thumbnail size variant type

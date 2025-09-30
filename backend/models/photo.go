@@ -63,6 +63,7 @@ type PhotoResponse struct {
 	AlbumID      *string `json:"album_id"`
 	AlbumTitle   *string `json:"album_title"`
 	ThumbnailURL string  `json:"thumbnail_url"`
+	LargeURL     string  `json:"large_url"`
 	FullURL      string  `json:"full_url"`
 	Type         string  `json:"type"`
 }
@@ -90,11 +91,17 @@ func (p *Photo) hasEmptyDescription() bool {
 // ToPhotoResponse converts a PhotoWithSizeVariants to a PhotoResponse with proper URL generation
 func (p *PhotoWithSizeVariants) ToPhotoResponse(lycheeBaseURL string) PhotoResponse {
 	thumbnailURL := ""
+	largeURL := ""
 	fullURL := ""
 
 	// Construct thumbnail URL
 	if p.ThumbnailPath != nil && *p.ThumbnailPath != "" {
 		thumbnailURL = constructImageURL(lycheeBaseURL, *p.ThumbnailPath)
+	}
+
+	// Construct large URL (for AI processing)
+	if p.LargePath != nil && *p.LargePath != "" {
+		largeURL = constructImageURL(lycheeBaseURL, *p.LargePath)
 	}
 
 	// Construct full/original image URL
@@ -109,6 +116,7 @@ func (p *PhotoWithSizeVariants) ToPhotoResponse(lycheeBaseURL string) PhotoRespo
 		AlbumID:      p.AlbumID,
 		AlbumTitle:   p.AlbumTitle,
 		ThumbnailURL: thumbnailURL,
+		LargeURL:     largeURL,
 		FullURL:      fullURL,
 		Type:         p.Type,
 	}
