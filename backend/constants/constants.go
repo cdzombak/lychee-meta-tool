@@ -44,8 +44,8 @@ const (
 // Database Constants
 const (
 	// Query limits
-	DefaultPhotoLimit = 50
-	MaxPhotoLimit     = 100
+	DefaultPhotoLimit = 1000
+	MaxPhotoLimit     = 1000
 	MinPhotoOffset    = 0
 
 	// ID constraints

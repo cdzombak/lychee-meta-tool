@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { photosAPI, albumsAPI } from '../api/client'
 
+const DEFAULT_PHOTO_LIMIT = 1000
+
 export const usePhotosStore = defineStore('photos', {
   state: () => ({
     photos: [],
@@ -41,7 +43,7 @@ export const usePhotosStore = defineStore('photos', {
       this.error = null
       
       try {
-        const params = {}
+        const params = { limit: DEFAULT_PHOTO_LIMIT }
         if (this.filter.albumId) {
           params.album_id = this.filter.albumId
         }
