@@ -16,7 +16,7 @@ CREATE INDEX idx_photos_metadata ON photos(title, description, created_at);
 CREATE INDEX idx_photos_id ON photos(id);
 
 -- Optimize album relationship queries
-CREATE INDEX idx_photos_album ON photos(old_album_id);
+CREATE INDEX idx_photo_album_composite ON photo_album(photo_id, album_id);
 
 -- Optimize photo-album junction table
 CREATE INDEX idx_photo_album_photo ON photo_album(photo_id);
@@ -39,7 +39,7 @@ CREATE INDEX idx_photos_metadata ON photos(title, description, created_at);
 CREATE INDEX idx_photos_id ON photos(id);
 
 -- Optimize album relationship queries
-CREATE INDEX idx_photos_album ON photos(old_album_id);
+CREATE INDEX idx_photo_album_composite ON photo_album(photo_id, album_id);
 
 -- Optimize photo-album junction table
 CREATE INDEX idx_photo_album_photo ON photo_album(photo_id);
@@ -65,7 +65,7 @@ CREATE INDEX idx_photos_metadata ON photos(title, description, created_at);
 CREATE INDEX idx_photos_id ON photos(id);
 
 -- Optimize album relationship queries
-CREATE INDEX idx_photos_album ON photos(old_album_id);
+CREATE INDEX idx_photo_album_composite ON photo_album(photo_id, album_id);
 
 -- Optimize photo-album junction table
 CREATE INDEX idx_photo_album_photo ON photo_album(photo_id);
