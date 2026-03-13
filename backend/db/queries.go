@@ -22,9 +22,9 @@ func (db *DB) GetPhotosNeedingMetadata(albumID *string, limit, offset int) ([]mo
 			sv_original.short_path as original_path
 		FROM photos p
 		LEFT JOIN base_albums a ON p.old_album_id = a.id
-		LEFT JOIN size_variants sv_thumb ON p.id = sv_thumb.photo_id AND sv_thumb.type = 6
-		LEFT JOIN size_variants sv_large ON p.id = sv_large.photo_id AND sv_large.type = 3
-		LEFT JOIN size_variants sv_original ON p.id = sv_original.photo_id AND sv_original.type = 0
+		LEFT JOIN size_variants sv_thumb ON p.id = sv_thumb.photo_id AND sv_thumb.type = 7
+		LEFT JOIN size_variants sv_large ON p.id = sv_large.photo_id AND sv_large.type = 2
+		LEFT JOIN size_variants sv_original ON p.id = sv_original.photo_id AND sv_original.type = 1
 		WHERE (
 			p.title = '' OR p.title IS NULL OR
 			p.title REGEXP '^[A-Za-z0-9]{3}_[0-9]+(\\.\\w+)?$' OR
@@ -102,9 +102,9 @@ func (db *DB) GetPhotoByID(id string) (*models.PhotoWithSizeVariants, error) {
 			sv_original.short_path as original_path
 		FROM photos p
 		LEFT JOIN base_albums a ON p.old_album_id = a.id
-		LEFT JOIN size_variants sv_thumb ON p.id = sv_thumb.photo_id AND sv_thumb.type = 6
-		LEFT JOIN size_variants sv_large ON p.id = sv_large.photo_id AND sv_large.type = 3
-		LEFT JOIN size_variants sv_original ON p.id = sv_original.photo_id AND sv_original.type = 0
+		LEFT JOIN size_variants sv_thumb ON p.id = sv_thumb.photo_id AND sv_thumb.type = 7
+		LEFT JOIN size_variants sv_large ON p.id = sv_large.photo_id AND sv_large.type = 2
+		LEFT JOIN size_variants sv_original ON p.id = sv_original.photo_id AND sv_original.type = 1
 		WHERE p.id = ?`
 
 	var photo models.PhotoWithSizeVariants

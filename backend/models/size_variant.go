@@ -4,14 +4,17 @@ package models
 type SizeVariantType int
 
 const (
-	// Based on Lychee's size variant types
-	SizeVariantOriginal    SizeVariantType = 0
-	SizeVariantSmall2x     SizeVariantType = 1
-	SizeVariantSmall       SizeVariantType = 2
-	SizeVariantMedium2x    SizeVariantType = 3
-	SizeVariantMedium      SizeVariantType = 4
-	SizeVariantSmallThumb  SizeVariantType = 5
-	SizeVariantThumb       SizeVariantType = 6
+	// Based on Lychee's SizeVariantType enum:
+	// https://github.com/LycheeOrg/Lychee/blob/master/app/Enum/SizeVariantType.php
+	SizeVariantRaw         SizeVariantType = 0
+	SizeVariantOriginal    SizeVariantType = 1
+	SizeVariantMedium2x    SizeVariantType = 2
+	SizeVariantMedium      SizeVariantType = 3
+	SizeVariantSmall2x     SizeVariantType = 4
+	SizeVariantSmall       SizeVariantType = 5
+	SizeVariantThumb2x     SizeVariantType = 6
+	SizeVariantThumb       SizeVariantType = 7
+	SizeVariantPlaceholder SizeVariantType = 8
 )
 
 // SizeVariant represents a photo size variant in the Lychee database
@@ -48,20 +51,24 @@ func GetOriginalVariant() SizeVariantType {
 // String returns a string representation of the size variant type
 func (s SizeVariantType) String() string {
 	switch s {
+	case SizeVariantRaw:
+		return "raw"
 	case SizeVariantOriginal:
 		return "original"
-	case SizeVariantSmall2x:
-		return "small2x"
-	case SizeVariantSmall:
-		return "small"
 	case SizeVariantMedium2x:
 		return "medium2x"
 	case SizeVariantMedium:
 		return "medium"
-	case SizeVariantSmallThumb:
-		return "small_thumb"
+	case SizeVariantSmall2x:
+		return "small2x"
+	case SizeVariantSmall:
+		return "small"
+	case SizeVariantThumb2x:
+		return "thumb2x"
 	case SizeVariantThumb:
 		return "thumb"
+	case SizeVariantPlaceholder:
+		return "placeholder"
 	default:
 		return "unknown"
 	}
