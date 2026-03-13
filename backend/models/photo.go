@@ -8,19 +8,24 @@ import (
 	"time"
 )
 
+// AlbumInfo represents a minimal album reference for a photo.
+type AlbumInfo struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
 // Photo represents a photo record from the Lychee database.
 // It contains all metadata fields including EXIF data, location information,
 // and user-provided metadata like title and description.
 type Photo struct {
-	ID           string     `json:"id" db:"id"`
-	CreatedAt    time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt    time.Time  `json:"updated_at" db:"updated_at"`
-	OwnerID      int        `json:"owner_id" db:"owner_id"`
-	AlbumID      *string    `json:"album_id" db:"old_album_id"`
-	Title        string     `json:"title" db:"title"`
-	Description  *string    `json:"description" db:"description"`
-	License      string     `json:"license" db:"license"`
-	IsStarred    bool       `json:"is_starred" db:"is_starred"`
+	ID            string     `json:"id" db:"id"`
+	CreatedAt     time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt     time.Time  `json:"updated_at" db:"updated_at"`
+	OwnerID       int        `json:"owner_id" db:"owner_id"`
+	Title         string     `json:"title" db:"title"`
+	Description   *string    `json:"description" db:"description"`
+	License       string     `json:"license" db:"license"`
+	IsHighlighted bool       `json:"is_highlighted" db:"is_highlighted"`
 	ISO          *string    `json:"iso" db:"iso"`
 	Make         *string    `json:"make" db:"make"`
 	Model        *string    `json:"model" db:"model"`
@@ -39,33 +44,33 @@ type Photo struct {
 	Checksum     string     `json:"checksum" db:"checksum"`
 }
 
-// PhotoWithAlbum extends Photo with album information.
-// This is used when retrieving photos along with their album details.
-type PhotoWithAlbum struct {
+// PhotoWithAlbums extends Photo with album information.
+// A photo can belong to multiple albums via the photo_album join table.
+type PhotoWithAlbums struct {
 	Photo
-	AlbumTitle *string `json:"album_title" db:"album_title"`
+	AlbumIDs    *string `json:"-" db:"album_ids"`
+	AlbumTitles *string `json:"-" db:"album_titles"`
 }
 
 // PhotoUpdate represents the fields that can be updated for a photo.
 // All fields are optional (pointers) to support partial updates.
 type PhotoUpdate struct {
-	Title       *string `json:"title"`
-	Description *string `json:"description"`
-	AlbumID     *string `json:"album_id"`
+	Title        *string `json:"title"`
+	Description  *string `json:"description"`
+	AddToAlbumID *string `json:"add_to_album_id"`
 }
 
 // PhotoResponse represents the JSON response format for photo data.
 // It includes computed URLs for thumbnail and full-size images.
 type PhotoResponse struct {
-	ID           string  `json:"id"`
-	Title        string  `json:"title"`
-	Description  *string `json:"description"`
-	AlbumID      *string `json:"album_id"`
-	AlbumTitle   *string `json:"album_title"`
-	ThumbnailURL string  `json:"thumbnail_url"`
-	LargeURL     string  `json:"large_url"`
-	FullURL      string  `json:"full_url"`
-	Type         string  `json:"type"`
+	ID           string      `json:"id"`
+	Title        string      `json:"title"`
+	Description  *string     `json:"description"`
+	Albums       []AlbumInfo `json:"albums"`
+	ThumbnailURL string      `json:"thumbnail_url"`
+	LargeURL     string      `json:"large_url"`
+	FullURL      string      `json:"full_url"`
+	Type         string      `json:"type"`
 }
 
 // NeedsMetadata determines if a photo requires metadata updates.
@@ -86,6 +91,27 @@ func (p *Photo) hasGenericTitle() bool {
 // hasEmptyDescription checks if the photo has an empty or nil description.
 func (p *Photo) hasEmptyDescription() bool {
 	return p.Description == nil || *p.Description == ""
+}
+
+// ParseAlbums returns the list of AlbumInfo from the GROUP_CONCAT'd album IDs and titles.
+func (p *PhotoWithAlbums) ParseAlbums() []AlbumInfo {
+	if p.AlbumIDs == nil || *p.AlbumIDs == "" {
+		return []AlbumInfo{}
+	}
+	ids := strings.Split(*p.AlbumIDs, ",")
+	var titles []string
+	if p.AlbumTitles != nil && *p.AlbumTitles != "" {
+		titles = strings.Split(*p.AlbumTitles, ",")
+	}
+	albums := make([]AlbumInfo, len(ids))
+	for i, id := range ids {
+		title := ""
+		if i < len(titles) {
+			title = titles[i]
+		}
+		albums[i] = AlbumInfo{ID: id, Title: title}
+	}
+	return albums
 }
 
 // ToPhotoResponse converts a PhotoWithSizeVariants to a PhotoResponse with proper URL generation
@@ -113,8 +139,7 @@ func (p *PhotoWithSizeVariants) ToPhotoResponse(lycheeBaseURL string) PhotoRespo
 		ID:           p.ID,
 		Title:        p.Title,
 		Description:  p.Description,
-		AlbumID:      p.AlbumID,
-		AlbumTitle:   p.AlbumTitle,
+		Albums:       p.ParseAlbums(),
 		ThumbnailURL: thumbnailURL,
 		LargeURL:     largeURL,
 		FullURL:      fullURL,

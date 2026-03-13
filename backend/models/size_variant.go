@@ -30,9 +30,9 @@ type SizeVariant struct {
 	StorageDisk string          `json:"storage_disk" db:"storage_disk"`
 }
 
-// PhotoWithSizeVariants extends PhotoWithAlbum to include size variants
+// PhotoWithSizeVariants extends PhotoWithAlbums to include size variants
 type PhotoWithSizeVariants struct {
-	PhotoWithAlbum
+	PhotoWithAlbums
 	ThumbnailPath *string `json:"thumbnail_path" db:"thumbnail_path"`
 	LargePath     *string `json:"large_path" db:"large_path"`
 	OriginalPath  *string `json:"original_path" db:"original_path"`

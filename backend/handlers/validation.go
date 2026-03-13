@@ -173,13 +173,13 @@ func ValidatePhotoUpdate(update *models.PhotoUpdate) []ValidationError {
 		}
 	}
 
-	// Validate album ID
-	if update.AlbumID != nil {
-		if !validateAlbumID(*update.AlbumID) {
+	// Validate album ID for add-to-album
+	if update.AddToAlbumID != nil {
+		if !validateAlbumID(*update.AddToAlbumID) {
 			errors = append(errors, ValidationError{
-				Field:   "album_id",
+				Field:   "add_to_album_id",
 				Message: fmt.Sprintf("invalid album ID format (length: %d-%d, pattern: alphanumeric, underscore, hyphen)", MinPhotoIDLength, MaxAlbumIDLength),
-				Value:   *update.AlbumID,
+				Value:   *update.AddToAlbumID,
 			})
 		}
 	}
