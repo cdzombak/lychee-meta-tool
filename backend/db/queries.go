@@ -198,11 +198,14 @@ func (db *DB) UpdatePhoto(id string, update models.PhotoUpdate) error {
 // AddPhotoToAlbum adds a photo to an album without removing existing memberships.
 func (db *DB) AddPhotoToAlbum(photoID, albumID string) error {
 	// Insert new photo_album relationship (ignore if already exists)
-	query := "INSERT IGNORE INTO photo_album (photo_id, album_id) VALUES (?, ?)"
-	if db.driver == "postgres" {
+	var query string
+	switch db.driver {
+	case "postgres":
 		query = "INSERT INTO photo_album (photo_id, album_id) VALUES ($1, $2) ON CONFLICT DO NOTHING"
-	} else if db.driver == "sqlite" {
+	case "sqlite":
 		query = "INSERT OR IGNORE INTO photo_album (photo_id, album_id) VALUES (?, ?)"
+	default:
+		query = "INSERT IGNORE INTO photo_album (photo_id, album_id) VALUES (?, ?)"
 	}
 
 	_, err := db.Exec(query, photoID, albumID)
