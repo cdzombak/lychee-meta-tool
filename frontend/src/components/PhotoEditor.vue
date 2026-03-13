@@ -41,11 +41,20 @@
         ></textarea>
       </div>
       
+      <div class="form-group" v-if="currentPhoto.albums && currentPhoto.albums.length > 0">
+        <label>Albums</label>
+        <div class="current-albums">
+          <span v-for="album in currentPhoto.albums" :key="album.id" class="album-tag">
+            {{ album.title }}
+          </span>
+        </div>
+      </div>
+
       <div class="form-group">
-        <label for="album">Album</label>
+        <label for="album">Add to Album</label>
         <AlbumSelector
-          v-model="formData.albumId"
-          :current-album-title="currentPhoto.album_title"
+          v-model="formData.addToAlbumId"
+          :current-album-title="null"
         />
       </div>
       
@@ -85,7 +94,7 @@ export default {
     const formData = ref({
       title: '',
       description: '',
-      albumId: null
+      addToAlbumId: null
     })
     
     const currentPhoto = computed(() => photosStore.currentPhoto)
@@ -96,7 +105,7 @@ export default {
         formData.value = {
           title: newPhoto.title || '',
           description: newPhoto.description || '',
-          albumId: newPhoto.album_id
+          addToAlbumId: null
         }
         
         // Focus and select title input
@@ -141,8 +150,8 @@ export default {
           updateData.description = formData.value.description
         }
         
-        if (formData.value.albumId !== currentPhoto.value.album_id) {
-          updateData.album_id = formData.value.albumId
+        if (formData.value.addToAlbumId) {
+          updateData.add_to_album_id = formData.value.addToAlbumId
         }
         
         // Only save if there are changes
@@ -282,5 +291,19 @@ h3 {
   background: #6c757d;
   cursor: not-allowed;
   transform: none;
+}
+
+.current-albums {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.album-tag {
+  background: #e3f2fd;
+  color: #1565c0;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 13px;
 }
 </style>
